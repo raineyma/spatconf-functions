@@ -1,13 +1,12 @@
 
 # spatconf-functions
 
-Functions for Semiparametric Approaches to Mitigate Spatial Confounding
+Functions for 'Semiparametric approaches for mitigating spatial confounding in large environmental epidemiology cohort studies' by Maddie J. Rainey and Kayleigh P. Keller.
 
-Included are the functions to implement the simulation run in 'Semiparametric approaches for mitigating spatial confounding in large environmental epidemiology cohort studies'. 
+Included are the functions to implement the simulation run in simulation_script.R. This script will load the functions listed in the following table below, set the options for the data generating process, and run a small simulation comparing the methods described in the manuscript.
 
 | Function | Description |
 |:----|:-------|
-|simulation_script| Script used to run simulation |
 |data_generating_functions| Functions used to create data |
 |unadjusted_mod| Spatially-unadjusted model, no spatial splines used |
 |gSEM_mod| Geoadditive Structural Equation method (Thaden and Kneib, 2018) |
