@@ -1,4 +1,4 @@
-# Author: Maddie Rainey, 2024 #
+# Author: Maddie Rainey, 2025 #
 
 
 ## Spatally-Unadjusted model ##
@@ -7,6 +7,8 @@
 #   x = exposure from sim.data()
 #   y = outcome from sim.data()
 #   beta = true value of exposure coefficient
+#   ind = indicator for additional measured covariates
+#   cov = additional measured covariates
 #   LOGISITC_DAT = indicates whether or not outcome is binary
 #   alpha = error rate for confidence interval
 # Output:
@@ -16,13 +18,21 @@
 #   k.used = NA, no knot selection is used for this regression
 #   reject = indicates if p-value is less than alpha (1 = p-value < alpha, 0 p-value >= alpha)
 
-null.mod <- function(x, y, beta, LOGISTIC_DAT = FALSE, alpha = 0.05){
+null.mod <- function(x, y, beta, ind, cov, LOGISTIC_DAT = FALSE, alpha = 0.05){
   
   #Fit base model
   if(LOGISTIC_DAT){
-    mod <- glm(y ~ x, family = binomial)
+    if(ind == 1){
+      mod <- glm(y ~ x + cov$z4 + as.factor(cov$z5) + cov$z6, family = binomial)
+    }else{
+      mod <- glm(y ~ x, family = binomial)
+    }
   }else{
-    mod <- lm(y ~ x)
+    if(ind == 1){
+      mod <- lm(y ~ x + cov$z4 + as.factor(cov$z5) + cov$z6)
+    }else{
+      mod <- lm(y ~ x)
+    }
   }
   #Get summary information
   summary.mod <- summary(mod)

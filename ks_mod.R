@@ -1,4 +1,4 @@
-# Author: Maddie Rainey, 2024 #
+# Author: Maddie Rainey, 2025 #
 
 library(mgcv)
 
@@ -8,6 +8,8 @@ library(mgcv)
 #   x = exposure from sim.data()
 #   y = outcome from sim.data()
 #   samp.grid = sampled data points
+#   ind = indicator for additional measured covariates
+#   cov = list of additional measured covariates
 #   AIC = Indicator for AIC or BIC. (TRUE = AIC, FALSE = BIC)
 #   beta = true value of exposure coefficient
 #   LOGSITIC_DAT = indicates whether or not outcome is binary
@@ -24,7 +26,7 @@ library(mgcv)
 #   reject = indicates if p-value is less than alpha (1 = p-value < alpha, 0 p-value >= alpha)
 
 
-tprs.adjust.mod <- function(x, y, samp.grid, AIC = FALSE, beta, LOGISTIC_DAT = FALSE, alpha = 0.05, max.df = 400, fx = F, df = 0){
+tprs.adjust.mod <- function(x, y, samp.grid, ind, cov, AIC = FALSE, beta, LOGISTIC_DAT = FALSE, alpha = 0.05, max.df = 400, fx = F, df = 0){
   
   if(!fx){
   #dimension of tprs
@@ -54,9 +56,17 @@ tprs.adjust.mod <- function(x, y, samp.grid, AIC = FALSE, beta, LOGISTIC_DAT = F
     df <- df.check[i]
    # print(df)
     if(LOGISTIC_DAT){
-      mod <- glm(y ~ tprs[, 1:df], family = binomial)
+      if(ind == 1){
+        mod <- glm(y ~ cov$z4 + as.factor(cov$z5) + cov$z6 + tprs[, 1:df], family = binomial)
+      }else{
+        mod <- glm(y ~ tprs[, 1:df], family = binomial)
+      }
     }else{
-      mod <- lm(y ~ tprs[, 1:df])
+      if(ind == 1){
+        mod <- lm(y ~ cov$z4 + as.factor(cov$z5) + cov$z6 + tprs[, 1:df])
+      }else{
+        mod <- lm(y ~ tprs[, 1:df])
+      }
     }
     if(AIC){
       val[i] <- AIC(mod)
@@ -70,9 +80,17 @@ tprs.adjust.mod <- function(x, y, samp.grid, AIC = FALSE, beta, LOGISTIC_DAT = F
   
   #Fit final model
   if(LOGISTIC_DAT){
-    tprs.adjust <- mgcv::gam(y ~ x + s(samp.grid[,1], samp.grid[,2], k = df+1, fx = T), family = binomial)
+    if(ind == 1){
+      tprs.adjust <- mgcv::gam(y ~ x + cov$z4 + as.factor(cov$z5) + cov$z6 + s(samp.grid[,1], samp.grid[,2], k = df+1, fx = T), family = binomial)
+    }else{
+      tprs.adjust <- mgcv::gam(y ~ x + s(samp.grid[,1], samp.grid[,2], k = df+1, fx = T), family = binomial)
+    }
   }else{
-    tprs.adjust <- mgcv::gam(y ~ x + s(samp.grid[,1], samp.grid[,2], k = df+1, fx = T))
+    if(ind == 1){
+      tprs.adjust <- mgcv::gam(y ~ x + cov$z4 + as.factor(cov$z5) + cov$z6 + s(samp.grid[,1], samp.grid[,2], k = df+1, fx = T))
+    }else{
+      tprs.adjust <- mgcv::gam(y ~ x + s(samp.grid[,1], samp.grid[,2], k = df+1, fx = T))
+    }
   }
   
   #Get summary values to get standard errors

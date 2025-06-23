@@ -1,4 +1,4 @@
-# Author: Maddie Rainey, 2024 #
+# Author: Maddie Rainey, 2025 #
 
 library(mgcv)
 
@@ -8,6 +8,8 @@ library(mgcv)
 #   x = exposure from sim.data()
 #   y = response from sim.data()
 #   samp.grid = sampled data points
+#   ind = indicator for additional measured covariates
+#   cov = list of additional measured covariates
 #   k = df used for TPRS basis
 #   fx = Indicator for spatial smoothing (0 = smoothing penalty, 1 = no penalty)
 #   beta = true value of exposure coefficient
@@ -21,7 +23,7 @@ library(mgcv)
 #   k.used.r = number of df used in outcome model
 #   reject = indicates if p-value is less than alpha (1 = p-value < alpha, 0 p-value >= alpha)
 
-spat.plus.mod <- function(x, y, samp.grid, k = 301, fx, beta, LOGISTIC_DAT = FALSE, alpha = 0.05){
+spat.plus.mod <- function(x, y, samp.grid, ind, cov, k = 301, fx, beta, LOGISTIC_DAT = FALSE, alpha = 0.05){
   
   #obtain spatial residuals for x
   ifelse(fx == 0,
@@ -33,13 +35,25 @@ spat.plus.mod <- function(x, y, samp.grid, k = 301, fx, beta, LOGISTIC_DAT = FAL
   
   #fit the Spatial+ model and output summary statistics
   if(LOGISTIC_DAT){
-    ifelse(fx == 0,
-           spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = k, fx = F), family = binomial),
-           spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = k, fx = T), family = binomial))
+    if(ind == 1){
+      ifelse(fx == 0,
+             spat.plus <- mgcv::gam(y ~ r.x + cov$z4 + as.factor(cov$z5) + cov$z6 + s(samp.grid[,1], samp.grid[,2], k = k, fx = F), family = binomial),
+             spat.plus <- mgcv::gam(y ~ r.x + cov$z4 + as.factor(cov$z5) + cov$z6 + s(samp.grid[,1], samp.grid[,2], k = k, fx = T), family = binomial))
+    }else{
+      ifelse(fx == 0,
+             spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = k, fx = F), family = binomial),
+             spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = k, fx = T), family = binomial))
+    }
   }else{
-    ifelse(fx == 0,
-          spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = k, fx = F)),
-          spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = k, fx = T)))
+    if(ind == 1){
+      ifelse(fx == 0,
+             spat.plus <- mgcv::gam(y ~ r.x + cov$z4 + as.factor(cov$z5) + cov$z6 + s(samp.grid[,1], samp.grid[,2], k = k, fx = F)),
+             spat.plus <- mgcv::gam(y ~ r.x + cov$z4 + as.factor(cov$z5) + cov$z6 + s(samp.grid[,1], samp.grid[,2], k = k, fx = T)))
+    }else{
+      ifelse(fx == 0,
+             spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = k, fx = F)),
+             spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = k, fx = T)))
+    }
   }
   #Get summary values to get standard errors
   spat.plus.summary <- summary(spat.plus)

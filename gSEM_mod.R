@@ -1,4 +1,4 @@
-# Author: Maddie Rainey, 2024 #
+# Author: Maddie Rainey, 2025 #
 
 library(mgcv)
 
@@ -8,6 +8,8 @@ library(mgcv)
 #   x = exposure from sim.data()
 #   y = outcome from sim.data()
 #   samp.grid = sampled data points
+#   ind = indicator for additional measured covariates
+#   cov = list of additional measured covariates
 #   k = number of knots for TPRS basis
 #   fx = Indicator for spatial smoothing (0 = smoothing penalty, 1 = no penalty)
 #   beta = true value of exposure coefficient
@@ -22,7 +24,7 @@ library(mgcv)
 #   reject = indicates if p-value is less than alpha (1 = p-value < alpha, 0 p-value >= alpha)
 
 
-gSEM.mod <- function(x, y, samp.grid, k = 301, fx, beta, LOGISTIC_DAT = FALSE, alpha = 0.05){
+gSEM.mod <- function(x, y, samp.grid, ind, cov, k = 301, fx, beta, LOGISTIC_DAT = FALSE, alpha = 0.05){
   
   #obtain spatial residuals for x
   ifelse(fx == 0,
@@ -46,17 +48,19 @@ gSEM.mod <- function(x, y, samp.grid, k = 301, fx, beta, LOGISTIC_DAT = FALSE, a
     r.y <- y.gam$residuals
   }
   #fit the gSEM model and output summary statistics
-  gSEM.lm <- lm(r.y~r.x+0)
+  if(ind == 1){
+    gSEM.lm <- lm(r.y~r.x + cov$z4 + as.factor(cov$z5) + cov$z6 + 0)
+  }else{
+    gSEM.lm <- lm(r.y~r.x + 0)
+  }
   
   #Get summary information
   summary.gSEM <- summary(gSEM.lm)
   
   #get coverage
-  lb <- as.numeric(gSEM.lm$coefficients) - qnorm(1 - alpha/2)*as.numeric(summary.gSEM$coefficients[1,2])
-  ub <- as.numeric(gSEM.lm$coefficients) + qnorm(1 - alpha/2)*as.numeric(summary.gSEM$coefficients[1,2])
+  lb <- as.numeric(gSEM.lm$coefficients[1]) - qnorm(1 - alpha/2)*as.numeric(summary.gSEM$coefficients[1,2])
+  ub <- as.numeric(gSEM.lm$coefficients[1]) + qnorm(1 - alpha/2)*as.numeric(summary.gSEM$coefficients[1,2])
   
-  
-  covers <- ifelse(lb <= beta & beta <= ub, 1, 0)
   
   covers <- ifelse(lb <= beta & beta <= ub, 1, 0)
   
@@ -73,7 +77,7 @@ gSEM.mod <- function(x, y, samp.grid, k = 301, fx, beta, LOGISTIC_DAT = FALSE, a
   }
   
   #Return beta
-  return(list("beta" = as.numeric(gSEM.lm$coefficients),
+  return(list("beta" = as.numeric(gSEM.lm$coefficients[1]),
               "se" = as.numeric(summary.gSEM$coefficients[1,2]),
               "coverage" = covers,
               "k.used.e" = k.used.exp,

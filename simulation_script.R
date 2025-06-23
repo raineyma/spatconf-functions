@@ -1,4 +1,4 @@
-# Author: Maddie Rainey, 2024 #
+# Author: Maddie Rainey, 2025 #
 
 source("data_generating_functions.R")
 source("unadjusted_mod.R")
@@ -22,6 +22,7 @@ source("eps_mod.R")
 # ind.2 = Indicate whether second spatial structure is used (0 = No, 1 = Yes)
 # ind.3 = Indicate whether third spatial structure is used (0 = No, 1 = Yes)
 # ind.4 = Indicate whether spatial confounding is present (0 = No, 1 = Yes)
+# ind.5 = Indicate whether additional covariates are to be simulated and incorporated (0 = No, 1 = Yes)
 # sigma.x = standard deviation used to simulate non-spatial error in x when ind.1 = 1
 # sigma.y = standard deviation used to simulate non-spatial error in y
 # beta = True coefficient of exposure
@@ -41,13 +42,14 @@ source("eps_mod.R")
 # seed = set to be set for replicability purposes
 
 n = 1000
-num.sim = 10
+num.sim = 5
 max.grid.x = max.grid.y = 10
 step.size = 0.2
 ind.1 = 1
 ind.2 = 1
 ind.3 = 1
 ind.4 = 1
+ind.5 = 1
 R.1 = 150
 R.2 = 10
 R.3 = 100
@@ -112,21 +114,27 @@ for(i in 1:num.sim){
   test.dist <- dist.mat(samp.grid = test.grid)
   test.data <- sim.data(n = n, h.mat = test.dist, samp.grid = test.grid, 
                         R.1 = R.1, R.2 = R.2, R.3 = R.3, 
-                        ind.1 = ind.1, ind.2 = ind.2, ind.3 = ind.3, ind.4 = ind.4, 
+                        ind.1 = ind.1, ind.2 = ind.2, ind.3 = ind.3, ind.4 = ind.4, ind.5 = ind.5,
                         d.1 = 1, d.2 = 1,
                         sigma.x = sigma.x, sigma.y = sigma.y, beta = beta, beta.f = beta.f,
                         PROJECT = PROJECT, k=k.sim, LOGISTIC_DAT = LOGISTIC_DAT, p = p, seed = seed)
   
+  #Create list of values for additional covariates
+
+  covariates <- list(z4 = test.data$z4, z5 = test.data$z5, z6 = test.data$z6)
+
+  
   #Run Each Model
   
   #Run spatially-unadjusted model
-  lm <- null.mod(x = test.data$x, y = test.data$y, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
+  
+  lm <- null.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
   
   #Run gSEM models
   if(gSEM.flag){
-    gSEM <- gSEM.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, k = k, fx = 0, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
-    gSEM.fx <- gSEM.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, k= k, fx = 1, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
-    gSEM.fx10 <- gSEM.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, k= 11, fx = 1, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
+    gSEM <- gSEM.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, k = k, fx = 0, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
+    gSEM.fx <- gSEM.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, k= k, fx = 1, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
+    gSEM.fx10 <- gSEM.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, k= 11, fx = 1, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
   }else{
     gSEM <- list("beta" = NA,
                  "se" = NA,
@@ -151,13 +159,13 @@ for(i in 1:num.sim){
   #Run Spatial+ models
   if(spatplus.flag){
     print('Spatial+ GCV')
-    spatplus <- spat.plus.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, k = k, 
+    spatplus <- spat.plus.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, k = k, 
                               fx = 0, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
     print('Spatial+ Fixed')
-    spatplus.fx <- spat.plus.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, k = k, 
+    spatplus.fx <- spat.plus.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, k = k, 
                                  fx = 1, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)
     print('Spatial+ Fixed df 10')
-    spatplus.fx10 <- spat.plus.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, k = 11, 
+    spatplus.fx10 <- spat.plus.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, k = 11, 
                                    fx = 1, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT)  
   }else{
     spatplus <- list("beta" = NA,
@@ -183,10 +191,10 @@ for(i in 1:num.sim){
   #Run KS models
   if(tprs.flag){
     print('KS AIC')
-    tprs.adj.AIC <- tprs.adjust.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, 
+    tprs.adj.AIC <- tprs.adjust.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, 
                                     AIC = TRUE, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT, max.df = max.df, fx = F, df = 0)
     print('KS BIC')
-    tprs.adj.BIC <- tprs.adjust.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, 
+    tprs.adj.BIC <- tprs.adjust.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, 
                                     AIC = FALSE, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT, max.df = max.df, fx = F, df = 0)
   }else{
     tprs.adj.AIC <- list("beta" = NA,
@@ -205,10 +213,10 @@ for(i in 1:num.sim){
   
   if(tprs.fx.flag){
     print('KS 3')
-    tprs.adj.df3 <- tprs.adjust.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, 
+    tprs.adj.df3 <- tprs.adjust.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, 
                                     AIC = TRUE, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT, max.df = max.df, fx = T, df = 3)
     print('KS 10')
-    tprs.adj.df10 <- tprs.adjust.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, 
+    tprs.adj.df10 <- tprs.adjust.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, 
                                      AIC = TRUE, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT, max.df = max.df, fx = T, df = 10)
   }else{
     tprs.adj.df3 <- list("beta" = NA,
@@ -228,10 +236,10 @@ for(i in 1:num.sim){
   #Run df-Spatial+ models
   if(knotspat.flag){
     print('Spatial+ AIC')
-    knotspat.AIC <- knot.spat.plus.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, 
+    knotspat.AIC <- knot.spat.plus.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, 
                                        AIC = TRUE, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT, max.df = max.df)
     print('Spatial+ BIC')
-    knotspat.BIC <- knot.spat.plus.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, 
+    knotspat.BIC <- knot.spat.plus.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, 
                                        AIC = FALSE, beta = beta, LOGISTIC_DAT = LOGISTIC_DAT, max.df = max.df)
   }else{
     knotspat.AIC <- list("beta" = NA,
@@ -251,7 +259,7 @@ for(i in 1:num.sim){
   # Run E-PS models
   if(eps.flag){
     print('E-PS')
-    eps <- eps.mod(x = test.data$x, y = test.data$y, samp.grid = test.grid, k = k, LOGISTIC_DAT = LOGISTIC_DAT, beta = beta)
+    eps <- eps.mod(x = test.data$x, y = test.data$y, ind = ind.5, cov = covariates, samp.grid = test.grid, k = k, LOGISTIC_DAT = LOGISTIC_DAT, beta = beta)
   }else{
     eps <- list("beta" = NA,
                 "se" = NA,

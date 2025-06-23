@@ -1,4 +1,4 @@
-# Author: Maddie Rainey, 2024 #
+# Author: Maddie Rainey, 2025 #
 
 library(mgcv)
 
@@ -8,6 +8,8 @@ library(mgcv)
 #   x = exposure from sim.data()
 #   y = response from sim.data()
 #   samp.grid = sampled data points
+#   ind = indicator for additional measured covariates
+#   cov = list of additional measured covariates
 #   AIC = Indicator for AIC (TRUE) or BIC (FALSE).
 #   beta = true value of exposure covariate
 #   LOGISTIC_DAT = indicates whether or not outcome is binary
@@ -21,7 +23,7 @@ library(mgcv)
 #   k.used.r = number of df used in outcome model
 #   reject = indicates if p-value is less than alpha (1 = p-value < alpha, 0 p-value >= alpha)
 
-knot.spat.plus.mod <- function(x, y, samp.grid, AIC = TRUE, beta, LOGISTIC_DAT = FALSE, alpha = 0.05, max.df = 400){
+knot.spat.plus.mod <- function(x, y, samp.grid, ind, cov, AIC = TRUE, beta, LOGISTIC_DAT = FALSE, alpha = 0.05, max.df = 400){
   
   #dimension of tprs
   k.tprs <- .75*dim(samp.grid)[1]
@@ -65,9 +67,17 @@ knot.spat.plus.mod <- function(x, y, samp.grid, AIC = TRUE, beta, LOGISTIC_DAT =
   
   #fit the model and output summary statistics
   if(LOGISTIC_DAT){
-    knot.spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = df.min+1, fx = T), family = binomial)
+    if(ind == 1){
+      knot.spat.plus <- mgcv::gam(y ~ r.x + cov$z4 + as.factor(cov$z5) + cov$z6 + s(samp.grid[,1], samp.grid[,2], k = df.min+1, fx = T), family = binomial)
+    }else{
+      knot.spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = df.min+1, fx = T), family = binomial)
+    }
   }else{
-    knot.spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = df.min+1, fx = T))
+    if(ind == 1){
+      knot.spat.plus <- mgcv::gam(y ~ r.x + cov$z4 + as.factor(cov$z5) + cov$z6 + s(samp.grid[,1], samp.grid[,2], k = df.min+1, fx = T))
+    }else{
+      knot.spat.plus <- mgcv::gam(y ~ r.x + s(samp.grid[,1], samp.grid[,2], k = df.min+1, fx = T))
+    }
   }
   #Get summary values to get standard errors
   knot.spat.plus.summary <- summary(knot.spat.plus)

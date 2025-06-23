@@ -1,4 +1,4 @@
-# Author: Maddie Rainey, 2024 #
+# Author: Maddie Rainey, 2025 #
 
 library(mvtnorm)
 library(mgcv)
@@ -79,6 +79,7 @@ expit <- function(x){
 #   ind.2 = Indicate whether second spatial structure is used (0 = No, 1 = Yes)
 #   ind.3 = Indicate whether third spatial structure is used (0 = No, 1 = Yes)
 #   ind.4 = Indicate whether spatial confounding is present (0 = No, 1 = Yes)
+#   ind.5 = Indicate whether additional covariates are to be simulated and incorporated (0 = No, 1 = Yes)
 #   d.1 = dampening parameter for x
 #   d.2 = dampening parameter for f
 #   sigma.x = standard deviation of the non-spatial errors for X
@@ -96,11 +97,14 @@ expit <- function(x){
 #   z1 = confounded spatial field
 #   z2 = spatial field unique to exposure
 #   z3 = spatial field unique to confounder
+#   z4 = spatial continuous measured confounder
+#   z5 = non-spatial binary measured confounder
+#   z6 = non-spatial continuous measured confounder
 #   prob = probability used to sample a binary outcome
 
 
 sim.data <- function(n = 1000, samp.grid = NULL, h.mat, 
-                     R.1, R.2, R.3, ind.1, ind.2, ind.3, ind.4, d.1, d.2,
+                     R.1, R.2, R.3, ind.1, ind.2, ind.3, ind.4, ind.5, d.1, d.2,
                      sigma.x, sigma.y = NULL, sigma.p = NA, beta, beta.f, 
                      PROJECT=FALSE, k=301, LOGISTIC_DAT = FALSE, p = 0.05, seed = seed){
   
@@ -115,6 +119,9 @@ sim.data <- function(n = 1000, samp.grid = NULL, h.mat,
   }
   if(ind.3 == 1){
     Cov.mat.3 <- exp(-(h.mat/R.3))
+  }
+  if(ind.5 == 1){
+    Cov.mat.4 <- exp(-(h.mat/25))
   }
   
   #Create spatial fields for data simulation
@@ -137,6 +144,22 @@ sim.data <- function(n = 1000, samp.grid = NULL, h.mat,
   }else{
     z3 <- NA
   }
+  if(ind.5 == 1){
+    z4 <- t(mvtnorm::rmvnorm(1, mean = rep(0, n), sigma = Cov.mat.4)) 
+    z5 <- sample(c(0,1,2), size = n, replace = TRUE, prob = c(.45,.45,.1))
+    z6 <- rnorm(n = n, mean = 0, sd = 2)
+    if(ind.4 == 1){
+      cov <- 0.7*(z4+z1) + 0.5*as.numeric(I(z5 == 1)) - 0.45*as.numeric(I(z5 == 2)) + 1.25*z6
+    }else{
+      cov <- 0.7*z4 + 0.5*as.numeric(I(z5 == 1)) - 0.45*as.numeric(I(z5 == 2)) + 1.25*z6
+    }
+  }else{
+    z4 <- NA
+    z5 <- NA
+    z6 <- NA
+    cov <- rep(0,n)
+  }
+  
   
   
   #If PROJECT = TRUE, the project spatial fields onto tprs and use fitted values
@@ -192,11 +215,11 @@ sim.data <- function(n = 1000, samp.grid = NULL, h.mat,
   }else{
     prob <- NA
     err.y <- rnorm(n, mean = 0, sd = sigma.y)
-    y.dat <- beta*x.dat + beta.f*f + err.y
+    y.dat <- beta*x.dat + beta.f*f + cov +  err.y
   }
   
   #Return data matrix
-  return(list(y = y.dat, x = x.dat, f = f, z1 = z1, z2 = z2, z3 = z3, prob = prob))
+  return(list(y = y.dat, x = x.dat, f = f, z1 = z1, z2 = z2, z3 = z3, z4 = z4, z5 = z5, z6 = z6, prob = prob))
 }
 
 
